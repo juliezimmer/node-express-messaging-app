@@ -25,6 +25,7 @@ var mongoose = require('mongoose');
 
 // ********* app.use ******** //
 //.use is another method of the express object that serves static files.
+//It also invokes midddleware.
 //the first parameter is expresss.static(), which is really a function.
 //(__dirname) is passed into the express.static() function.
 //express.static is a built-in middleware function of express.
@@ -39,50 +40,66 @@ app.use(express.static(__dirname));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
+//require promise library
+//This tells mongoose to use the default es6 promise library.
+mongoose.Promise = Promise; 
+
+
 //connection to mongo/mLab
+var dbUrl = 'mongodb://user:user@ds111496.mlab.com:11496/learning-node-message-app';
 
-var dbURL = 'mongodb://user:user@ds111496.mlab.com:11496/learning-node-message-app';
-
-var messages = [
-      {
-        name: "Tim",
-        message: "Hi"
-      },
-      {
-        name: "Sarah",
-        message: "Hello"
-      }
-  ];
-
+var Message = mongoose.model('Message', {
+    name: String,
+    message: String
+  });
+  
 // ********* app.get ********* //
 //This specifies that the server is handling "get" requests.
 //app.get is a method of the express object.
 //The first parameter is the route being used for the get request.
 //The second parameter is a callback function to handle the request.
 //The callback function takes in two parameters of req and res.
-app.get('/messages', (req,res) => {
-  res.send(messages); //the variable declared at the top of the file. 
+app.get('/messages', (req,res) => {   
+    Message.find({}, (err, messages) => {  
+    res.send(messages); 
+  })
 });
 
-app.post('/messages', (req,res) => {
-  messages.push(req.body);
-  //this alerts users when a new message has been submitted to the app.
-  //an event listener also needs to be added to client.js
-  io.emit('message', req.body);
-  res.sendStatus(200);
+app.post('/messages', async (req,res) => {
+  var message = new Message(req.body);
+  
+  //saves messages to DB
+  var savedMessage = await message.save();
+    console.log("The message has been saved");
+
+  //checks for identified bad/censored words
+  var censored = await Message.findOne({message: 'badword'});
+    if(censored) {
+        await Message.remove({_id: censored.id});
+    } else {
+        io.emit('message', req.body);
+        res.sendStatus(200);
+    }
+   
+    
+  // })
+  // .catch((err) => {
+  //   res.sendStatus(500);
+  //   return console.error(err);
+  
 });
 
-/*This is the callback function that checks for connections   of other users.
+/*This is the callback function that checks for connections   of other   users.
   The function takes in a socket and has an anonymous callback function. */
 io.on('connection', (socket) => {
-    console.log("A user connected");
+  console.log("A user connected");
 });
 
 //connect to mongoose with the connect method. 
 //The 1st parameter is the dbURL.
 //The 2nd parameter is an object that sets useMongoCLient to true.  
 //3rd parameter is a callback function that takes err as parameter. 
-mongoose.connect(dbURL, {useMongoClient : true}, (err) => {
+mongoose.connect(dbUrl, {useMongoClient : true}, (err) => {
     console.log("MongoDB is connected", err);
 });
 
