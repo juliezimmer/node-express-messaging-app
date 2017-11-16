@@ -18,6 +18,9 @@ var http = require('http').Server(app);
 //socket.io must also be set-up on the front-end.
 var io = require('socket.io')(http);
 
+//require mongoose
+var mongoose = require('mongoose');
+
 //chaining will be used to tell the express app what to do. 
 
 // ********* app.use ******** //
@@ -35,6 +38,10 @@ app.use(express.static(__dirname));
 //This tells bodyParser that JSON will be coming in with http requests. 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
+
+//connection to mongo/mLab
+
+var dbURL = 'mongodb://user:user@ds111496.mlab.com:11496/learning-node-message-app';
 
 var messages = [
       {
@@ -58,15 +65,25 @@ app.get('/messages', (req,res) => {
 });
 
 app.post('/messages', (req,res) => {
-  console.log("This is the req.body: ", req.body);
   messages.push(req.body);
+  //this alerts users when a new message has been submitted to the app.
+  //an event listener also needs to be added to client.js
+  io.emit('message', req.body);
   res.sendStatus(200);
 });
 
 /*This is the callback function that checks for connections   of other users.
   The function takes in a socket and has an anonymous callback function. */
 io.on('connection', (socket) => {
-    console.log("A user connected on: ", socket);
+    console.log("A user connected");
+});
+
+//connect to mongoose with the connect method. 
+//The 1st parameter is the dbURL.
+//The 2nd parameter is an object that sets useMongoCLient to true.  
+//3rd parameter is a callback function that takes err as parameter. 
+mongoose.connect(dbURL, {useMongoClient : true}, (err) => {
+    console.log("MongoDB is connected", err);
 });
 
 // ********** app.listen ********** //

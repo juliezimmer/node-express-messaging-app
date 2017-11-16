@@ -4,8 +4,7 @@
 var socket = io();
 
 $(() => {
-
-      $("#send").click(() => {
+    $("#send").click(() => {
         var message = {
             name: $("#name").val(),
             message: $("#message").val()
@@ -14,11 +13,17 @@ $(() => {
         })
       getMessages();
     });
+//event listener for socket.io
+//This listens for an event message and then calls addMessage().
+//Only addMessage is used in the event listener.
+//Nothing is passed into the function.
+
+  socket.on('message', addMessage); 
 
 // add messages function
 //It takes a parameter of a message object
 //This should add the object in the first function parameter to the DOM.
-function addMessages(message) {
+function addMessage(message) {
     $("#messages").append(`<h4> ${message.name} </h4> 
           <p> ${message.message} </p>`);
   };
@@ -29,7 +34,7 @@ function addMessages(message) {
   function getMessages() { 
       $.get('http://localhost:3000/messages', (data) => {
           //This populeate the DOM with the message history in a for each loop. 
-          data.forEach(addMessages);
+          data.forEach(addMessage);
           });
       };
   function postMessages(message) { 
